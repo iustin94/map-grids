@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ .Site.Title }}</title>
+  <link rel="stylesheet" href="{{ "css/app.css" | relURL }}">
+</head>
+<body>
+  <aside class="controls no-print">
+    <h1>Map Grids</h1>
+    <p class="sub">Printable isometric / dimetric templates</p>
+
+    <label>
+      Grid type
+      <select id="gridType">
+        <option value="isometric">Isometric (30°)</option>
+        <option value="dimetric">Dimetric (26.57°, 1:2)</option>
+        <option value="hex-pointy">Hexagonal — pointy-top</option>
+        <option value="hex-flat">Hexagonal — flat-top</option>
+      </select>
+    </label>
+
+    <label>
+      Page size
+      <select id="pageSize">
+        <option value="letter-portrait">Letter — Portrait (8.5 × 11 in)</option>
+        <option value="letter-landscape">Letter — Landscape (11 × 8.5 in)</option>
+        <option value="a4-portrait">A4 — Portrait (210 × 297 mm)</option>
+        <option value="a4-landscape">A4 — Landscape (297 × 210 mm)</option>
+      </select>
+    </label>
+
+    <label>
+      Cell size: <span class="val" id="cellSizeVal">10</span> mm
+      <input type="range" id="cellSize" min="2" max="40" step="0.5" value="10">
+    </label>
+
+    <label>
+      Line width: <span class="val" id="lineWidthVal">0.30</span> mm
+      <input type="range" id="lineWidth" min="0.05" max="2" step="0.05" value="0.30">
+    </label>
+
+    <label>
+      Line opacity: <span class="val" id="opacityVal">0.60</span>
+      <input type="range" id="opacity" min="0.05" max="1" step="0.05" value="0.60">
+    </label>
+
+    <label class="color-row">
+      Line color
+      <input type="color" id="color" value="#1a73e8">
+    </label>
+
+    <label class="checkbox-row">
+      <input type="checkbox" id="showVertical" checked>
+      Include vertical lines
+    </label>
+
+    <label>
+      Margin: <span class="val" id="marginVal">10</span> mm
+      <input type="range" id="margin" min="0" max="30" step="1" value="10">
+    </label>
+
+    <div class="actions">
+      <button id="printBtn" type="button">Print</button>
+      <button id="downloadBtn" type="button">Download SVG</button>
+    </div>
+
+    <div class="hint">
+      <strong>Before printing</strong>, open <em>More settings</em> in the print dialog and:
+      <ul>
+        <li>Set <strong>Margins</strong> to <em>None</em></li>
+        <li>Uncheck <strong>Headers and footers</strong> (this is the only way to hide the URL, title, and date — no website can disable it for you)</li>
+        <li>Set <strong>Scale</strong> to <em>Default</em> (100%) so the cell sizes stay accurate</li>
+      </ul>
+    </div>
+  </aside>
+
+  <main class="page-wrap">
+    <div id="paper" class="paper">
+      <svg id="grid" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </main>
+
+  <script src="{{ "js/app.js" | relURL }}"></script>
+</body>
+</html>
