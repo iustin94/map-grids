@@ -1,4 +1,4 @@
-baseURL = "/"
+baseURL = "https://mapgrids.olaru.dk/"
 title = "Map Grids"
 
 [languages.en]
