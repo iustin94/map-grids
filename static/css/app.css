@@ -100,6 +100,45 @@ body {
 
 .controls .checkbox-row input { margin: 0; }
 
+.controls .seed-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.controls .seed-row input[type="number"] {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.controls .seed-row button {
+  width: 36px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.controls .seed-row button:hover { filter: brightness(0.97); }
+
+/* Grid-type-specific visibility — toggled by JS via <body data-grid="...">.
+   .grid-only      → only for the regular line/hex grids (cell size, verticals)
+   .voronoi-only   → only when Voronoi is selected
+   .contours-only  → only when Contours is selected
+   .seeded         → for any seeded procedural pattern (Voronoi or Contours) */
+body[data-grid="voronoi"] .grid-only,
+body[data-grid="contours"] .grid-only { display: none; }
+body:not([data-grid="voronoi"]) .voronoi-only { display: none; }
+body:not([data-grid="contours"]) .contours-only { display: none; }
+body:not([data-grid="voronoi"]):not([data-grid="contours"]) .seeded { display: none; }
+
 .actions {
   display: flex;
   gap: 8px;

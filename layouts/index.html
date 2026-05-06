@@ -18,6 +18,8 @@
         <option value="dimetric">Dimetric (26.57°, 1:2)</option>
         <option value="hex-pointy">Hexagonal — pointy-top</option>
         <option value="hex-flat">Hexagonal — flat-top</option>
+        <option value="voronoi">Voronoi (organic cells)</option>
+        <option value="contours">Contour lines (terrain)</option>
       </select>
     </label>
 
@@ -31,9 +33,51 @@
       </select>
     </label>
 
-    <label>
+    <label class="grid-only">
       Cell size: <span class="val" id="cellSizeVal">10</span> mm
       <input type="range" id="cellSize" min="2" max="40" step="0.5" value="10">
+    </label>
+
+    <label class="voronoi-only">
+      Site placement
+      <select id="voronoiPlacement">
+        <option value="poisson">Poisson-disk (even spacing)</option>
+        <option value="random-lloyd">Random + Lloyd relaxation</option>
+        <option value="random">Random (rough, irregular)</option>
+      </select>
+    </label>
+
+    <label class="voronoi-only">
+      Density: <span class="val" id="densityVal">200</span> sites
+      <input type="range" id="density" min="20" max="2000" step="10" value="200">
+    </label>
+
+    <label class="voronoi-only">
+      Lloyd iterations: <span class="val" id="lloydIterVal">2</span>
+      <input type="range" id="lloydIter" min="0" max="6" step="1" value="2">
+    </label>
+
+    <label class="contours-only">
+      Feature scale: <span class="val" id="contourScaleVal">30</span> mm
+      <input type="range" id="contourScale" min="5" max="120" step="1" value="30">
+    </label>
+
+    <label class="contours-only">
+      Detail (octaves): <span class="val" id="contourOctavesVal">4</span>
+      <input type="range" id="contourOctaves" min="1" max="6" step="1" value="4">
+    </label>
+
+    <label class="contours-only">
+      Contour levels: <span class="val" id="contourLevelsVal">20</span>
+      <input type="range" id="contourLevels" min="3" max="60" step="1" value="20">
+    </label>
+
+    <label class="seeded">
+      Seed
+      <div class="seed-row">
+        <input type="number" id="seed" value="1" min="0" step="1">
+        <button id="regenBtn" type="button" title="New random seed">↻</button>
+      </div>
     </label>
 
     <label>
@@ -51,7 +95,7 @@
       <input type="color" id="color" value="#1a73e8">
     </label>
 
-    <label class="checkbox-row">
+    <label class="checkbox-row grid-only">
       <input type="checkbox" id="showVertical" checked>
       Include vertical lines
     </label>
