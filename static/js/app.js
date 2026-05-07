@@ -28,6 +28,14 @@
     contourScale: $('contourScale'), contourScaleVal: $('contourScaleVal'),
     contourOctaves: $('contourOctaves'), contourOctavesVal: $('contourOctavesVal'),
     contourLevels: $('contourLevels'), contourLevelsVal: $('contourLevelsVal'),
+    rayMode: $('rayMode'),
+    horizonPct: $('horizonPct'), horizonPctVal: $('horizonPctVal'),
+    vpLeftOffset: $('vpLeftOffset'), vpLeftOffsetVal: $('vpLeftOffsetVal'),
+    vpRightOffset: $('vpRightOffset'), vpRightOffsetVal: $('vpRightOffsetVal'),
+    rayCount: $('rayCount'), rayCountVal: $('rayCountVal'),
+    vertSpacing: $('vertSpacing'), vertSpacingVal: $('vertSpacingVal'),
+    showHorizon: $('showHorizon'),
+    showPerspectiveVerticals: $('showPerspectiveVerticals'),
     seed: $('seed'),
     regenBtn: $('regenBtn'),
     paper: $('paper'),
@@ -644,6 +652,91 @@
     return out;
   }
 
+  // === Two-point perspective ============================================
+  //
+  // Two vanishing points sit on a shared horizon line, typically off the
+  // page (artists pin them to taped-on extensions of the paper). Rays from
+  // each VP fan across the page; verticals stay strictly vertical. We
+  // generate long rays from each VP and let the existing Liang-Barsky
+  // clipper crop them to the grid rect.
+  //
+  // Two ray-distribution modes:
+  //   'angle' — equal angular spacing across the angular extent that the
+  //             rect subtends from the VP. Looks like a clean fan.
+  //   'edge'  — evenly-spaced crossing points on the FAR edge (right edge
+  //             for the left VP, left edge for the right VP). Looks more
+  //             visually uniform across the page interior.
+  function twoPointPerspectiveLines(w, h, opts) {
+    const horizonY = (h * opts.horizonPct) / 100;
+    const vpL = { x: -opts.vpLeftOffset,     y: horizonY };
+    const vpR = { x:  w + opts.vpRightOffset, y: horizonY };
+    // Far enough that the ray reaches the far side of the rect from any VP.
+    const D = (w + h + opts.vpLeftOffset + opts.vpRightOffset + 1) * 4;
+    const segs = [];
+
+    function addRay(vp, angle) {
+      const ray = {
+        x1: vp.x, y1: vp.y,
+        x2: vp.x + Math.cos(angle) * D,
+        y2: vp.y + Math.sin(angle) * D,
+      };
+      const c = clipSegment(ray, 0, 0, w, h);
+      if (!c) return;
+      if (Math.abs(c.x2 - c.x1) < 1e-6 && Math.abs(c.y2 - c.y1) < 1e-6) return;
+      segs.push(c);
+    }
+
+    const N = Math.max(2, opts.rayCount | 0);
+
+    if (opts.rayMode === 'edge') {
+      // Crossing points on each VP's far edge, including endpoints so the
+      // rays through the corners (the visual "frame") are present.
+      for (let i = 0; i < N; i++) {
+        const t = i / (N - 1);
+        const y = t * h;
+        addRay(vpL, Math.atan2(y - vpL.y, w - vpL.x));
+        addRay(vpR, Math.atan2(y - vpR.y, 0 - vpR.x));
+      }
+    } else {
+      // Angular extent = angle range from VP to the four rect corners.
+      // atan2 returns (-π, π]; when the VP sits to the right of the rect,
+      // angles to the corners straddle the ±π discontinuity. Detect by the
+      // naive range exceeding π and shift negatives by 2π before re-sorting.
+      const corners = [{x:0,y:0},{x:w,y:0},{x:0,y:h},{x:w,y:h}];
+      for (const vp of [vpL, vpR]) {
+        let angles = corners.map(c => Math.atan2(c.y - vp.y, c.x - vp.x));
+        let aMin = Math.min(...angles);
+        let aMax = Math.max(...angles);
+        if (aMax - aMin > Math.PI) {
+          angles = angles.map(a => a < 0 ? a + 2 * Math.PI : a);
+          aMin = Math.min(...angles);
+          aMax = Math.max(...angles);
+        }
+        // Skip the exact corner rays — they clip to a single point and
+        // produce no visible segment. Distribute N rays at strict interior
+        // positions: t = (i+1)/(N+1).
+        for (let i = 0; i < N; i++) {
+          const t = (i + 1) / (N + 1);
+          addRay(vp, aMin + t * (aMax - aMin));
+        }
+      }
+    }
+
+    if (opts.showVertical && opts.vertSpacing > 0) {
+      const nMax = Math.floor(w / opts.vertSpacing);
+      for (let n = 0; n <= nMax; n++) {
+        const x = n * opts.vertSpacing;
+        segs.push({ x1: x, y1: 0, x2: x, y2: h });
+      }
+    }
+
+    if (opts.showHorizon && horizonY >= 0 && horizonY <= h) {
+      segs.push({ x1: 0, y1: horizonY, x2: w, y2: horizonY });
+    }
+
+    return segs;
+  }
+
   function render() {
     const pageKey = els.pageSize.value;
     const { w: pageW, h: pageH } = PAGE_SIZES[pageKey];
@@ -656,6 +749,7 @@
     const isHex = gridType === 'hex-pointy' || gridType === 'hex-flat';
     const isVoronoi = gridType === 'voronoi';
     const isContours = gridType === 'contours';
+    const isPerspective = gridType === 'perspective-2pt';
     const angleDeg = GRID_ANGLES_DEG[gridType];
     const angleRad = (angleDeg || 0) * Math.PI / 180;
 
@@ -679,6 +773,13 @@
     els.contourScaleVal.textContent = els.contourScale.value;
     els.contourOctavesVal.textContent = els.contourOctaves.value;
     els.contourLevelsVal.textContent = els.contourLevels.value;
+    els.horizonPctVal.textContent = els.horizonPct.value;
+    els.vpLeftOffsetVal.textContent = els.vpLeftOffset.value;
+    els.vpRightOffsetVal.textContent = els.vpRightOffset.value;
+    els.rayCountVal.textContent = els.rayCount.value;
+    els.vertSpacingVal.textContent = parseFloat(els.vertSpacing.value).toFixed(
+      els.vertSpacing.value % 1 === 0 ? 0 : 1
+    );
 
     // Set paper to physical size on screen.
     els.paper.style.width  = pageW + 'mm';
@@ -748,20 +849,34 @@
       return;
     }
 
-    if (isVoronoi || isContours) {
-      const segs = isVoronoi
-        ? voronoiLines(gridW, gridH, {
-            seed: parseInt(els.seed.value, 10) || 1,
-            density: parseInt(els.density.value, 10) || 200,
-            placement: els.voronoiPlacement.value,
-            lloydIter: parseInt(els.lloydIter.value, 10) || 0,
-          })
-        : contourLines(gridW, gridH, {
-            seed: parseInt(els.seed.value, 10) || 1,
-            scale: parseFloat(els.contourScale.value) || 30,
-            octaves: parseInt(els.contourOctaves.value, 10) || 4,
-            levels: parseInt(els.contourLevels.value, 10) || 20,
-          });
+    if (isVoronoi || isContours || isPerspective) {
+      let segs;
+      if (isVoronoi) {
+        segs = voronoiLines(gridW, gridH, {
+          seed: parseInt(els.seed.value, 10) || 1,
+          density: parseInt(els.density.value, 10) || 200,
+          placement: els.voronoiPlacement.value,
+          lloydIter: parseInt(els.lloydIter.value, 10) || 0,
+        });
+      } else if (isContours) {
+        segs = contourLines(gridW, gridH, {
+          seed: parseInt(els.seed.value, 10) || 1,
+          scale: parseFloat(els.contourScale.value) || 30,
+          octaves: parseInt(els.contourOctaves.value, 10) || 4,
+          levels: parseInt(els.contourLevels.value, 10) || 20,
+        });
+      } else {
+        segs = twoPointPerspectiveLines(gridW, gridH, {
+          rayMode: els.rayMode.value,
+          horizonPct: parseFloat(els.horizonPct.value) || 50,
+          vpLeftOffset: parseFloat(els.vpLeftOffset.value) || 0,
+          vpRightOffset: parseFloat(els.vpRightOffset.value) || 0,
+          rayCount: parseInt(els.rayCount.value, 10) || 18,
+          vertSpacing: parseFloat(els.vertSpacing.value) || 15,
+          showHorizon: els.showHorizon.checked,
+          showVertical: els.showPerspectiveVerticals.checked,
+        });
+      }
       for (const s of segs) {
         const ln = document.createElementNS(SVG_NS, 'line');
         ln.setAttribute('x1', s.x1.toFixed(3));
@@ -830,6 +945,14 @@
     ['contourScale',     'value'],
     ['contourOctaves',   'value'],
     ['contourLevels',    'value'],
+    ['rayMode',                  'value'],
+    ['horizonPct',               'value'],
+    ['vpLeftOffset',             'value'],
+    ['vpRightOffset',            'value'],
+    ['rayCount',                 'value'],
+    ['vertSpacing',              'value'],
+    ['showHorizon',              'checked'],
+    ['showPerspectiveVerticals', 'checked'],
     ['seed',             'value'],
   ];
 
@@ -870,6 +993,9 @@
     els.opacity, els.color, els.showVertical, els.margin,
     els.voronoiPlacement, els.density, els.lloydIter,
     els.contourScale, els.contourOctaves, els.contourLevels,
+    els.rayMode, els.horizonPct, els.vpLeftOffset, els.vpRightOffset,
+    els.rayCount, els.vertSpacing,
+    els.showHorizon, els.showPerspectiveVerticals,
     els.seed,
   ];
   function onChange() { render(); saveSettings(); }

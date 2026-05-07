@@ -134,9 +134,11 @@ body {
    .contours-only  → only when Contours is selected
    .seeded         → for any seeded procedural pattern (Voronoi or Contours) */
 body[data-grid="voronoi"] .grid-only,
-body[data-grid="contours"] .grid-only { display: none; }
+body[data-grid="contours"] .grid-only,
+body[data-grid="perspective-2pt"] .grid-only { display: none; }
 body:not([data-grid="voronoi"]) .voronoi-only { display: none; }
 body:not([data-grid="contours"]) .contours-only { display: none; }
+body:not([data-grid="perspective-2pt"]) .perspective-only { display: none; }
 body:not([data-grid="voronoi"]):not([data-grid="contours"]) .seeded { display: none; }
 
 .actions {

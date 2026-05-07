@@ -20,6 +20,7 @@
         <option value="hex-flat">Hexagonal — flat-top</option>
         <option value="voronoi">Voronoi (organic cells)</option>
         <option value="contours">Contour lines (terrain)</option>
+        <option value="perspective-2pt">Perspective — 2-point</option>
       </select>
     </label>
 
@@ -70,6 +71,49 @@
     <label class="contours-only">
       Contour levels: <span class="val" id="contourLevelsVal">20</span>
       <input type="range" id="contourLevels" min="3" max="60" step="1" value="20">
+    </label>
+
+    <label class="perspective-only">
+      Ray distribution
+      <select id="rayMode">
+        <option value="angle">Equal angle (fan)</option>
+        <option value="edge">Equal spacing on far edge</option>
+      </select>
+    </label>
+
+    <label class="perspective-only">
+      Horizon: <span class="val" id="horizonPctVal">50</span>%
+      <input type="range" id="horizonPct" min="0" max="100" step="1" value="50">
+    </label>
+
+    <label class="perspective-only">
+      Left VP offset: <span class="val" id="vpLeftOffsetVal">50</span> mm
+      <input type="range" id="vpLeftOffset" min="0" max="500" step="5" value="50">
+    </label>
+
+    <label class="perspective-only">
+      Right VP offset: <span class="val" id="vpRightOffsetVal">50</span> mm
+      <input type="range" id="vpRightOffset" min="0" max="500" step="5" value="50">
+    </label>
+
+    <label class="perspective-only">
+      Rays per VP: <span class="val" id="rayCountVal">18</span>
+      <input type="range" id="rayCount" min="3" max="80" step="1" value="18">
+    </label>
+
+    <label class="perspective-only">
+      Vertical spacing: <span class="val" id="vertSpacingVal">15</span> mm
+      <input type="range" id="vertSpacing" min="2" max="60" step="0.5" value="15">
+    </label>
+
+    <label class="checkbox-row perspective-only">
+      <input type="checkbox" id="showHorizon" checked>
+      Show horizon line
+    </label>
+
+    <label class="checkbox-row perspective-only">
+      <input type="checkbox" id="showPerspectiveVerticals" checked>
+      Show vertical lines
     </label>
 
     <label class="seeded">
