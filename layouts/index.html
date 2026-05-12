@@ -11,143 +11,177 @@
     <h1>Map Grids</h1>
     <p class="sub">Printable isometric / dimetric templates</p>
 
-    <label>
-      Grid type
-      <select id="gridType">
-        <option value="isometric">Isometric (30°)</option>
-        <option value="dimetric">Dimetric (26.57°, 1:2)</option>
-        <option value="hex-pointy">Hexagonal — pointy-top</option>
-        <option value="hex-flat">Hexagonal — flat-top</option>
-        <option value="voronoi">Voronoi (organic cells)</option>
-        <option value="contours">Contour lines (terrain)</option>
-        <option value="perspective-2pt">Perspective — 2-point</option>
-      </select>
-    </label>
+    <section class="panel">
+      <h2>Grid</h2>
 
-    <label>
-      Page size
-      <select id="pageSize">
-        <option value="letter-portrait">Letter — Portrait (8.5 × 11 in)</option>
-        <option value="letter-landscape">Letter — Landscape (11 × 8.5 in)</option>
-        <option value="a4-portrait">A4 — Portrait (210 × 297 mm)</option>
-        <option value="a4-landscape">A4 — Landscape (297 × 210 mm)</option>
-      </select>
-    </label>
+      <label>
+        Grid type
+        <select id="gridType">
+          <option value="isometric">Isometric (30°)</option>
+          <option value="dimetric">Dimetric (26.57°, 1:2)</option>
+          <option value="hex-pointy">Hexagonal — pointy-top</option>
+          <option value="hex-flat">Hexagonal — flat-top</option>
+          <option value="voronoi">Voronoi (organic cells)</option>
+          <option value="contours">Contour lines (terrain)</option>
+          <option value="perspective-2pt">Perspective — 2-point</option>
+        </select>
+      </label>
 
-    <label class="grid-only">
-      Cell size: <span class="val" id="cellSizeVal">10</span> mm
-      <input type="range" id="cellSize" min="2" max="40" step="0.5" value="10">
-    </label>
+      <label>
+        Page size
+        <select id="pageSize">
+          <option value="letter-portrait">Letter — Portrait (8.5 × 11 in)</option>
+          <option value="letter-landscape">Letter — Landscape (11 × 8.5 in)</option>
+          <option value="a4-portrait">A4 — Portrait (210 × 297 mm)</option>
+          <option value="a4-landscape">A4 — Landscape (297 × 210 mm)</option>
+        </select>
+      </label>
 
-    <label class="voronoi-only">
-      Site placement
-      <select id="voronoiPlacement">
-        <option value="poisson">Poisson-disk (even spacing)</option>
-        <option value="random-lloyd">Random + Lloyd relaxation</option>
-        <option value="random">Random (rough, irregular)</option>
-      </select>
-    </label>
+      <label class="grid-only">
+        Cell size: <span class="val" id="cellSizeVal">10</span> mm
+        <input type="range" id="cellSize" min="2" max="40" step="0.5" value="10">
+      </label>
 
-    <label class="voronoi-only">
-      Density: <span class="val" id="densityVal">200</span> sites
-      <input type="range" id="density" min="20" max="2000" step="10" value="200">
-    </label>
+      <label class="checkbox-row grid-only">
+        <input type="checkbox" id="showVertical" checked>
+        Include vertical lines
+      </label>
 
-    <label class="voronoi-only">
-      Lloyd iterations: <span class="val" id="lloydIterVal">2</span>
-      <input type="range" id="lloydIter" min="0" max="6" step="1" value="2">
-    </label>
+      <label class="voronoi-only">
+        Site placement
+        <select id="voronoiPlacement">
+          <option value="poisson">Poisson-disk (even spacing)</option>
+          <option value="random-lloyd">Random + Lloyd relaxation</option>
+          <option value="random">Random (rough, irregular)</option>
+        </select>
+      </label>
 
-    <label class="contours-only">
-      Feature scale: <span class="val" id="contourScaleVal">30</span> mm
-      <input type="range" id="contourScale" min="5" max="120" step="1" value="30">
-    </label>
+      <label class="voronoi-only">
+        Density: <span class="val" id="densityVal">200</span> sites
+        <input type="range" id="density" min="20" max="2000" step="10" value="200">
+      </label>
 
-    <label class="contours-only">
-      Detail (octaves): <span class="val" id="contourOctavesVal">4</span>
-      <input type="range" id="contourOctaves" min="1" max="6" step="1" value="4">
-    </label>
+      <label class="voronoi-only">
+        Lloyd iterations: <span class="val" id="lloydIterVal">2</span>
+        <input type="range" id="lloydIter" min="0" max="6" step="1" value="2">
+      </label>
 
-    <label class="contours-only">
-      Contour levels: <span class="val" id="contourLevelsVal">20</span>
-      <input type="range" id="contourLevels" min="3" max="60" step="1" value="20">
-    </label>
+      <label class="contours-only">
+        Feature scale: <span class="val" id="contourScaleVal">30</span> mm
+        <input type="range" id="contourScale" min="5" max="120" step="1" value="30">
+      </label>
 
-    <label class="perspective-only">
-      Ray distribution
-      <select id="rayMode">
-        <option value="angle">Equal angle (fan)</option>
-        <option value="edge">Equal spacing on far edge</option>
-      </select>
-    </label>
+      <label class="contours-only">
+        Detail (octaves): <span class="val" id="contourOctavesVal">4</span>
+        <input type="range" id="contourOctaves" min="1" max="6" step="1" value="4">
+      </label>
 
-    <label class="perspective-only">
-      Horizon: <span class="val" id="horizonPctVal">50</span>%
-      <input type="range" id="horizonPct" min="0" max="100" step="1" value="50">
-    </label>
+      <label class="contours-only">
+        Contour levels: <span class="val" id="contourLevelsVal">20</span>
+        <input type="range" id="contourLevels" min="3" max="60" step="1" value="20">
+      </label>
 
-    <label class="perspective-only">
-      Left VP offset: <span class="val" id="vpLeftOffsetVal">50</span> mm
-      <input type="range" id="vpLeftOffset" min="0" max="500" step="5" value="50">
-    </label>
+      <label class="perspective-only">
+        Page layout
+        <select id="pageLayout">
+          <option value="single">Single page</option>
+          <option value="two-horizontal">Two pages — side by side</option>
+          <option value="two-vertical">Two pages — top &amp; bottom</option>
+        </select>
+      </label>
 
-    <label class="perspective-only">
-      Right VP offset: <span class="val" id="vpRightOffsetVal">50</span> mm
-      <input type="range" id="vpRightOffset" min="0" max="500" step="5" value="50">
-    </label>
+      <label class="perspective-only">
+        Ray distribution
+        <select id="rayMode">
+          <option value="angle">Equal angle (fan)</option>
+          <option value="edge">Equal spacing on far edge</option>
+        </select>
+      </label>
 
-    <label class="perspective-only">
-      Rays per VP: <span class="val" id="rayCountVal">18</span>
-      <input type="range" id="rayCount" min="3" max="80" step="1" value="18">
-    </label>
+      <label class="perspective-only">
+        Horizon: <span class="val" id="horizonPctVal">50</span>%
+        <input type="range" id="horizonPct" min="0" max="100" step="1" value="50">
+      </label>
 
-    <label class="perspective-only">
-      Vertical spacing: <span class="val" id="vertSpacingVal">15</span> mm
-      <input type="range" id="vertSpacing" min="2" max="60" step="0.5" value="15">
-    </label>
+      <label class="perspective-only">
+        Left VP offset: <span class="val" id="vpLeftOffsetVal">50</span> mm
+        <input type="range" id="vpLeftOffset" min="0" max="500" step="5" value="50">
+      </label>
 
-    <label class="checkbox-row perspective-only">
-      <input type="checkbox" id="showHorizon" checked>
-      Show horizon line
-    </label>
+      <label class="perspective-only">
+        Right VP offset: <span class="val" id="vpRightOffsetVal">50</span> mm
+        <input type="range" id="vpRightOffset" min="0" max="500" step="5" value="50">
+      </label>
 
-    <label class="checkbox-row perspective-only">
-      <input type="checkbox" id="showPerspectiveVerticals" checked>
-      Show vertical lines
-    </label>
+      <label class="perspective-only">
+        Rays per VP: <span class="val" id="rayCountVal">18</span>
+        <input type="range" id="rayCount" min="3" max="80" step="1" value="18">
+      </label>
 
-    <label class="seeded">
-      Seed
-      <div class="seed-row">
-        <input type="number" id="seed" value="1" min="0" step="1">
-        <button id="regenBtn" type="button" title="New random seed">↻</button>
-      </div>
-    </label>
+      <label class="perspective-only">
+        Vertical spacing: <span class="val" id="vertSpacingVal">15</span> mm
+        <input type="range" id="vertSpacing" min="2" max="60" step="0.5" value="15">
+      </label>
 
-    <label>
-      Line width: <span class="val" id="lineWidthVal">0.30</span> mm
-      <input type="range" id="lineWidth" min="0.1" max="2" step="0.05" value="0.30">
-    </label>
+      <label class="checkbox-row perspective-only">
+        <input type="checkbox" id="showHorizon" checked>
+        Show horizon line
+      </label>
 
-    <label>
-      Line opacity: <span class="val" id="opacityVal">0.60</span>
-      <input type="range" id="opacity" min="0.05" max="1" step="0.05" value="0.60">
-    </label>
+      <label class="checkbox-row perspective-only">
+        <input type="checkbox" id="showPerspectiveVerticals" checked>
+        Show vertical lines
+      </label>
 
-    <label class="color-row">
-      Line color
-      <input type="color" id="color" value="#1a73e8">
-    </label>
+      <label class="seeded">
+        Seed
+        <div class="seed-row">
+          <input type="number" id="seed" value="1" min="0" step="1">
+          <button id="regenBtn" type="button" title="New random seed">↻</button>
+        </div>
+      </label>
+    </section>
 
-    <label class="checkbox-row grid-only">
-      <input type="checkbox" id="showVertical" checked>
-      Include vertical lines
-    </label>
+    <section class="panel">
+      <h2>Style</h2>
 
-    <label>
-      Margin: <span class="val" id="marginVal">10</span> mm
-      <input type="range" id="margin" min="0" max="30" step="1" value="10">
-    </label>
+      <label class="color-row">
+        Line color
+        <input type="color" id="color" value="#1a73e8">
+      </label>
+
+      <label>
+        Line width: <span class="val" id="lineWidthVal">0.30</span> mm
+        <input type="range" id="lineWidth" min="0.1" max="2" step="0.05" value="0.30">
+      </label>
+
+      <label>
+        Line opacity: <span class="val" id="opacityVal">0.60</span>
+        <input type="range" id="opacity" min="0.05" max="1" step="0.05" value="0.60">
+      </label>
+
+      <label>
+        Line style
+        <select id="lineStyle">
+          <option value="solid">Solid</option>
+          <option value="dashed">Dashed</option>
+          <option value="dotted">Dotted</option>
+          <option value="long-dash">Long dash</option>
+          <option value="dash-dot">Dash-dot</option>
+          <option value="hand-drawn">Hand-drawn (sketchy)</option>
+        </select>
+      </label>
+
+      <label class="handdrawn-only">
+        Roughness: <span class="val" id="roughnessVal">1.5</span>
+        <input type="range" id="roughness" min="0.2" max="4" step="0.1" value="1.5">
+      </label>
+
+      <label>
+        Margin: <span class="val" id="marginVal">10</span> mm
+        <input type="range" id="margin" min="0" max="30" step="1" value="10">
+      </label>
+    </section>
 
     <div class="actions">
       <button id="printBtn" type="button">Print</button>
@@ -170,6 +204,7 @@
     </div>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.min.js"></script>
   <script src="{{ "js/app.js" | relURL }}"></script>
 </body>
 </html>

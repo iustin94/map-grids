@@ -11,6 +11,19 @@
     dimetric: Math.atan(0.5) * 180 / Math.PI, // ~26.565°
   };
 
+  // Stroke patterns are in absolute mm (not stroke-width multiples) so the
+  // visual rhythm stays consistent across line widths at print scale.
+  // 'dotted' uses a zero-length dash + round linecap — the standard SVG trick
+  // for true circular dots, where the cap "fills in" the zero-length gap as
+  // a disc of diameter = stroke-width.
+  const LINE_STYLES = {
+    'solid':     { dasharray: null,                linecap: 'square' },
+    'dashed':    { dasharray: '2,1.5',             linecap: 'butt'   },
+    'dotted':    { dasharray: '0,1.5',             linecap: 'round'  },
+    'long-dash': { dasharray: '5,2',               linecap: 'butt'   },
+    'dash-dot':  { dasharray: '3,1.5,0,1.5',       linecap: 'round'  },
+  };
+
   const $ = (id) => document.getElementById(id);
 
   const els = {
@@ -20,6 +33,8 @@
     lineWidth: $('lineWidth'), lineWidthVal: $('lineWidthVal'),
     opacity: $('opacity'), opacityVal: $('opacityVal'),
     color: $('color'),
+    lineStyle: $('lineStyle'),
+    roughness: $('roughness'), roughnessVal: $('roughnessVal'),
     showVertical: $('showVertical'),
     margin: $('margin'), marginVal: $('marginVal'),
     voronoiPlacement: $('voronoiPlacement'),
@@ -28,6 +43,7 @@
     contourScale: $('contourScale'), contourScaleVal: $('contourScaleVal'),
     contourOctaves: $('contourOctaves'), contourOctavesVal: $('contourOctavesVal'),
     contourLevels: $('contourLevels'), contourLevelsVal: $('contourLevelsVal'),
+    pageLayout: $('pageLayout'),
     rayMode: $('rayMode'),
     horizonPct: $('horizonPct'), horizonPctVal: $('horizonPctVal'),
     vpLeftOffset: $('vpLeftOffset'), vpLeftOffsetVal: $('vpLeftOffsetVal'),
@@ -737,6 +753,30 @@
     return segs;
   }
 
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  // Make sure exactly `n` `.paper` divs (each with an inner <svg>) exist in
+  // `.page-wrap`. The first paper is the original DOM element (id="paper"
+  // with svg id="grid"); extras are created/removed as needed. Returns them
+  // in document order.
+  function ensurePapers(n) {
+    const wrap = document.querySelector('.page-wrap');
+    let papers = Array.from(wrap.querySelectorAll('.paper'));
+    while (papers.length < n) {
+      const p = document.createElement('div');
+      p.className = 'paper';
+      const s = document.createElementNS(SVG_NS, 'svg');
+      s.setAttribute('xmlns', SVG_NS);
+      p.appendChild(s);
+      wrap.appendChild(p);
+      papers.push(p);
+    }
+    while (papers.length > n) {
+      wrap.removeChild(papers.pop());
+    }
+    return papers;
+  }
+
   function render() {
     const pageKey = els.pageSize.value;
     const { w: pageW, h: pageH } = PAGE_SIZES[pageKey];
@@ -745,6 +785,11 @@
     const lineW = parseFloat(els.lineWidth.value);
     const opacity = parseFloat(els.opacity.value);
     const color = els.color.value;
+    const lineStyleKey = els.lineStyle.value;
+    const isHandDrawn = lineStyleKey === 'hand-drawn';
+    const lineStyle = LINE_STYLES[lineStyleKey] || LINE_STYLES.solid;
+    const roughness = parseFloat(els.roughness.value) || 1.5;
+    const handDrawnSeed = parseInt(els.seed.value, 10) || 1;
     const gridType = els.gridType.value;
     const isHex = gridType === 'hex-pointy' || gridType === 'hex-flat';
     const isVoronoi = gridType === 'voronoi';
@@ -753,8 +798,26 @@
     const angleDeg = GRID_ANGLES_DEG[gridType];
     const angleRad = (angleDeg || 0) * Math.PI / 180;
 
-    // Drives `.voronoi-only` / `.not-voronoi` visibility via CSS.
+    // Multi-page layouts only apply to perspective — for everything else the
+    // grid lives on a single sheet. We build a combined logical canvas
+    // (one rect that spans both sheets) and slice it into per-page viewBoxes
+    // so a ray drawn near the seam continues uninterrupted onto the next page.
+    const pageLayout = isPerspective ? els.pageLayout.value : 'single';
+    let combinedW = pageW, combinedH = pageH;
+    let pageOffsets = [{ x: 0, y: 0 }];
+    if (pageLayout === 'two-horizontal') {
+      combinedW = pageW * 2;
+      pageOffsets = [{ x: 0, y: 0 }, { x: pageW, y: 0 }];
+    } else if (pageLayout === 'two-vertical') {
+      combinedH = pageH * 2;
+      pageOffsets = [{ x: 0, y: 0 }, { x: 0, y: pageH }];
+    }
+
+    // Drives `.voronoi-only` / `.perspective-only` visibility via CSS, and
+    // the page-wrap flex direction for two-page layouts.
     document.body.setAttribute('data-grid', gridType);
+    document.body.setAttribute('data-page-layout', pageLayout);
+    document.body.setAttribute('data-line-style', lineStyleKey);
 
     // Vertical lines only make sense for isometric — dimetric forms rhombi
     // and hex grids define their own structure.
@@ -780,14 +843,11 @@
     els.vertSpacingVal.textContent = parseFloat(els.vertSpacing.value).toFixed(
       els.vertSpacing.value % 1 === 0 ? 0 : 1
     );
-
-    // Set paper to physical size on screen.
-    els.paper.style.width  = pageW + 'mm';
-    els.paper.style.height = pageH + 'mm';
+    els.roughnessVal.textContent = roughness.toFixed(1);
 
     // Inject a concrete @page size so the browser does not shrink-to-fit or
-    // add its own paper margins on print. Without this, `.paper` can overflow
-    // the printable area and trigger a horizontal scrollbar that gets printed.
+    // add its own paper margins on print. Each printed sheet is one pageW×pageH
+    // regardless of how many logical pages the canvas spans.
     let pageStyle = document.getElementById('print-page-style');
     if (!pageStyle) {
       pageStyle = document.createElement('style');
@@ -797,61 +857,33 @@
     pageStyle.textContent =
       `@page { size: ${pageW}mm ${pageH}mm; margin: 0; }`;
 
-    // SVG sized to page in mm, viewBox in mm so coords are 1:1 with mm.
-    const svg = els.svg;
-    svg.setAttribute('width',  pageW + 'mm');
-    svg.setAttribute('height', pageH + 'mm');
-    svg.setAttribute('viewBox', `0 0 ${pageW} ${pageH}`);
-    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    // Inner grid rect lives inside the combined canvas, inset by `margin` on
+    // all four outer sides (not on the seam between pages — that's the whole
+    // point of "extends across pages").
+    const gridW = Math.max(0, combinedW - 2 * margin);
+    const gridH = Math.max(0, combinedH - 2 * margin);
 
-    const gridW = Math.max(0, pageW - 2 * margin);
-    const gridH = Math.max(0, pageH - 2 * margin);
-    if (gridW === 0 || gridH === 0) return;
-
-    // Hex grids extend ghost hexes past the grid bounds so boundary edges get
-    // drawn — clip them to the grid rectangle. Voronoi already self-clips
-    // via Liang-Barsky inside voronoiLines, so it doesn't need clip-path.
-    const SVG_NS = 'http://www.w3.org/2000/svg';
-    if (isHex) {
-      const defs = document.createElementNS(SVG_NS, 'defs');
-      const clip = document.createElementNS(SVG_NS, 'clipPath');
-      clip.setAttribute('id', 'grid-clip');
-      const rect = document.createElementNS(SVG_NS, 'rect');
-      rect.setAttribute('x', 0);
-      rect.setAttribute('y', 0);
-      rect.setAttribute('width',  gridW);
-      rect.setAttribute('height', gridH);
-      clip.appendChild(rect);
-      defs.appendChild(clip);
-      svg.appendChild(defs);
-    }
-
-    // Translate the grid group by the margin so all lines stay inside.
-    const g = document.createElementNS(SVG_NS, 'g');
-    g.setAttribute('transform', `translate(${margin} ${margin})`);
-    g.setAttribute('fill', 'none');
-    g.setAttribute('stroke', color);
-    g.setAttribute('stroke-width', lineW);
-    g.setAttribute('stroke-opacity', opacity);
-    g.setAttribute('stroke-linecap', 'square');
-    g.setAttribute('stroke-linejoin', 'miter');
-    if (isHex) g.setAttribute('clip-path', 'url(#grid-clip)');
-    svg.appendChild(g);
-
-    if (isHex) {
-      const orientation = gridType === 'hex-pointy' ? 'pointy' : 'flat';
-      const paths = hexPaths(gridW, gridH, cell, orientation);
-      for (const d of paths) {
-        const p = document.createElementNS(SVG_NS, 'path');
-        p.setAttribute('d', d);
-        g.appendChild(p);
-      }
-      return;
-    }
-
-    if (isVoronoi || isContours || isPerspective) {
-      let segs;
-      if (isVoronoi) {
+    // Generate geometry once in combined-grid local coords. The same data is
+    // reused across all pages — each page just translates the group to put
+    // its slice of the combined canvas into its own viewBox origin.
+    let hexPathsList = null;
+    let segs = null;
+    let segFamilies = null;
+    if (gridW > 0 && gridH > 0) {
+      if (isHex) {
+        hexPathsList = hexPaths(gridW, gridH, cell, gridType === 'hex-pointy' ? 'pointy' : 'flat');
+      } else if (isPerspective) {
+        segs = twoPointPerspectiveLines(gridW, gridH, {
+          rayMode: els.rayMode.value,
+          horizonPct: parseFloat(els.horizonPct.value) || 50,
+          vpLeftOffset: parseFloat(els.vpLeftOffset.value) || 0,
+          vpRightOffset: parseFloat(els.vpRightOffset.value) || 0,
+          rayCount: parseInt(els.rayCount.value, 10) || 18,
+          vertSpacing: parseFloat(els.vertSpacing.value) || 15,
+          showHorizon: els.showHorizon.checked,
+          showVertical: els.showPerspectiveVerticals.checked,
+        });
+      } else if (isVoronoi) {
         segs = voronoiLines(gridW, gridH, {
           seed: parseInt(els.seed.value, 10) || 1,
           density: parseInt(els.density.value, 10) || 200,
@@ -866,44 +898,110 @@
           levels: parseInt(els.contourLevels.value, 10) || 20,
         });
       } else {
-        segs = twoPointPerspectiveLines(gridW, gridH, {
-          rayMode: els.rayMode.value,
-          horizonPct: parseFloat(els.horizonPct.value) || 50,
-          vpLeftOffset: parseFloat(els.vpLeftOffset.value) || 0,
-          vpRightOffset: parseFloat(els.vpRightOffset.value) || 0,
-          rayCount: parseInt(els.rayCount.value, 10) || 18,
-          vertSpacing: parseFloat(els.vertSpacing.value) || 15,
-          showHorizon: els.showHorizon.checked,
-          showVertical: els.showPerspectiveVerticals.checked,
-        });
+        segFamilies = [
+          parallelLines(gridW, gridH,  angleRad, cell),
+          parallelLines(gridW, gridH, -angleRad, cell),
+        ];
+        if (showVertical) segFamilies.push(verticalLines(gridW, gridH, cell));
       }
-      for (const s of segs) {
-        const ln = document.createElementNS(SVG_NS, 'line');
-        ln.setAttribute('x1', s.x1.toFixed(3));
-        ln.setAttribute('y1', s.y1.toFixed(3));
-        ln.setAttribute('x2', s.x2.toFixed(3));
-        ln.setAttribute('y2', s.y2.toFixed(3));
-        g.appendChild(ln);
-      }
-      return;
     }
 
-    const families = [
-      parallelLines(gridW, gridH,  angleRad, cell),
-      parallelLines(gridW, gridH, -angleRad, cell),
-    ];
-    if (showVertical) {
-      families.push(verticalLines(gridW, gridH, cell));
-    }
+    // Defensive: if rough.js failed to load (offline CDN, blocked script),
+    // gracefully degrade to solid SVG rendering rather than throwing.
+    const roughAvailable = isHandDrawn && typeof rough !== 'undefined';
+    const roughOpts = roughAvailable ? {
+      roughness, stroke: color, strokeWidth: lineW, bowing: 1,
+    } : null;
 
-    for (const fam of families) {
-      for (const s of fam) {
-        const ln = document.createElementNS(SVG_NS, 'line');
-        ln.setAttribute('x1', s.x1.toFixed(3));
-        ln.setAttribute('y1', s.y1.toFixed(3));
-        ln.setAttribute('x2', s.x2.toFixed(3));
-        ln.setAttribute('y2', s.y2.toFixed(3));
-        g.appendChild(ln);
+    const papers = ensurePapers(pageOffsets.length);
+    for (let i = 0; i < papers.length; i++) {
+      const paper = papers[i];
+      const off = pageOffsets[i];
+
+      paper.style.width  = pageW + 'mm';
+      paper.style.height = pageH + 'mm';
+
+      const svg = paper.querySelector('svg');
+      svg.setAttribute('width',  pageW + 'mm');
+      svg.setAttribute('height', pageH + 'mm');
+      svg.setAttribute('viewBox', `0 0 ${pageW} ${pageH}`);
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+      if (gridW === 0 || gridH === 0) continue;
+
+      // Hex grids extend ghost hexes past the grid bounds so boundary edges
+      // get drawn — clip them to the inner grid rect. Each paper needs its
+      // own clipPath id to keep multi-paper documents valid.
+      if (isHex) {
+        const defs = document.createElementNS(SVG_NS, 'defs');
+        const clip = document.createElementNS(SVG_NS, 'clipPath');
+        const clipId = `grid-clip-${i}`;
+        clip.setAttribute('id', clipId);
+        const rect = document.createElementNS(SVG_NS, 'rect');
+        rect.setAttribute('x', 0);
+        rect.setAttribute('y', 0);
+        rect.setAttribute('width',  gridW);
+        rect.setAttribute('height', gridH);
+        clip.appendChild(rect);
+        defs.appendChild(clip);
+        svg.appendChild(defs);
+      }
+
+      // Grid group origin: combined-canvas (margin, margin) maps to this
+      // page's viewBox (margin - off.x, margin - off.y). For a single page,
+      // off is (0,0) and this reduces to the original translate(margin, margin).
+      const g = document.createElementNS(SVG_NS, 'g');
+      g.setAttribute('transform', `translate(${margin - off.x} ${margin - off.y})`);
+      g.setAttribute('fill', 'none');
+      // Rough.js sets stroke/stroke-width on its own emitted paths; leaving
+      // them off the group avoids fighting its inner attributes. Opacity is
+      // inherited so we keep that on the group either way.
+      if (!roughAvailable) {
+        g.setAttribute('stroke', color);
+        g.setAttribute('stroke-width', lineW);
+        g.setAttribute('stroke-linecap', lineStyle.linecap);
+        if (lineStyle.dasharray) g.setAttribute('stroke-dasharray', lineStyle.dasharray);
+      }
+      g.setAttribute('stroke-opacity', opacity);
+      g.setAttribute('stroke-linejoin', 'miter');
+      if (isHex) g.setAttribute('clip-path', `url(#grid-clip-${i})`);
+      svg.appendChild(g);
+
+      const rc = roughAvailable ? rough.svg(svg) : null;
+
+      // Per-call seed = base + monotonically-increasing index, so each line
+      // wobbles distinctly but the whole drawing is reproducible from one seed.
+      let k = 0;
+      const addSeg = (s) => {
+        if (rc) {
+          g.appendChild(rc.line(s.x1, s.y1, s.x2, s.y2,
+            { ...roughOpts, seed: handDrawnSeed + (k++) }));
+        } else {
+          const ln = document.createElementNS(SVG_NS, 'line');
+          ln.setAttribute('x1', s.x1.toFixed(3));
+          ln.setAttribute('y1', s.y1.toFixed(3));
+          ln.setAttribute('x2', s.x2.toFixed(3));
+          ln.setAttribute('y2', s.y2.toFixed(3));
+          g.appendChild(ln);
+        }
+      };
+      const addPath = (d) => {
+        if (rc) {
+          g.appendChild(rc.path(d,
+            { ...roughOpts, seed: handDrawnSeed + (k++) }));
+        } else {
+          const p = document.createElementNS(SVG_NS, 'path');
+          p.setAttribute('d', d);
+          g.appendChild(p);
+        }
+      };
+
+      if (isHex) {
+        for (const d of hexPathsList) addPath(d);
+      } else if (segs) {
+        for (const s of segs) addSeg(s);
+      } else if (segFamilies) {
+        for (const fam of segFamilies) for (const s of fam) addSeg(s);
       }
     }
   }
@@ -937,6 +1035,8 @@
     ['lineWidth',        'value'],
     ['opacity',          'value'],
     ['color',            'value'],
+    ['lineStyle',        'value'],
+    ['roughness',        'value'],
     ['showVertical',     'checked'],
     ['margin',           'value'],
     ['voronoiPlacement', 'value'],
@@ -945,6 +1045,7 @@
     ['contourScale',     'value'],
     ['contourOctaves',   'value'],
     ['contourLevels',    'value'],
+    ['pageLayout',               'value'],
     ['rayMode',                  'value'],
     ['horizonPct',               'value'],
     ['vpLeftOffset',             'value'],
@@ -990,10 +1091,10 @@
   // Wire events.
   const inputs = [
     els.gridType, els.pageSize, els.cellSize, els.lineWidth,
-    els.opacity, els.color, els.showVertical, els.margin,
+    els.opacity, els.color, els.lineStyle, els.roughness, els.showVertical, els.margin,
     els.voronoiPlacement, els.density, els.lloydIter,
     els.contourScale, els.contourOctaves, els.contourLevels,
-    els.rayMode, els.horizonPct, els.vpLeftOffset, els.vpRightOffset,
+    els.pageLayout, els.rayMode, els.horizonPct, els.vpLeftOffset, els.vpRightOffset,
     els.rayCount, els.vertSpacing,
     els.showHorizon, els.showPerspectiveVerticals,
     els.seed,

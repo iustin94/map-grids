@@ -44,6 +44,21 @@ body {
   font-size: 12px;
 }
 
+.controls .panel + .panel {
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.controls h2 {
+  margin: 0 0 14px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+
 .controls label {
   display: block;
   margin-bottom: 14px;
@@ -139,7 +154,8 @@ body[data-grid="perspective-2pt"] .grid-only { display: none; }
 body:not([data-grid="voronoi"]) .voronoi-only { display: none; }
 body:not([data-grid="contours"]) .contours-only { display: none; }
 body:not([data-grid="perspective-2pt"]) .perspective-only { display: none; }
-body:not([data-grid="voronoi"]):not([data-grid="contours"]) .seeded { display: none; }
+body:not([data-grid="voronoi"]):not([data-grid="contours"]):not([data-line-style="hand-drawn"]) .seeded { display: none; }
+body:not([data-line-style="hand-drawn"]) .handdrawn-only { display: none; }
 
 .actions {
   display: flex;
@@ -186,11 +202,19 @@ body:not([data-grid="voronoi"]):not([data-grid="contours"]) .seeded { display: n
   align-items: flex-start;
   justify-content: center;
   overflow: auto;
+  gap: 16px;
+}
+
+/* Two-page layouts: side-by-side keeps row direction; top-and-bottom stacks. */
+body[data-page-layout="two-vertical"] .page-wrap {
+  flex-direction: column;
+  align-items: center;
 }
 
 .paper {
   background: #fff;
   box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.08);
+  flex: 0 0 auto;
 }
 
 .paper svg {
@@ -225,5 +249,7 @@ body:not([data-grid="voronoi"]):not([data-grid="contours"]) .seeded { display: n
     page-break-after: avoid;
     page-break-inside: avoid;
   }
+  /* Multi-page layouts: force a fresh sheet between sibling papers. */
+  .paper + .paper { page-break-before: always; }
   .paper svg { overflow: hidden; display: block; }
 }
